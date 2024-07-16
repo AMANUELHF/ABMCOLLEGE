@@ -1,0 +1,438 @@
+CREATE TABLE TOWN (
+    town_id INT PRIMARY KEY,
+    town_lat DECIMAL(10, 6),
+    town_long DECIMAL(10, 6),
+    town_name VARCHAR(255),
+    town_state VARCHAR(255),
+    town_avg_summer_temp DECIMAL(5, 2),
+    town_avg_winter_temp DECIMAL(5, 2),
+    town_population INT
+);
+
+CREATE TABLE POINT_OF_INTEREST (
+    poi_id INT PRIMARY KEY,
+    poi_street_address VARCHAR(255),
+    poi_town_id INT,
+    poi_name VARCHAR(255),
+    poi_open_time TIME,
+    poi_close_time TIME,
+    poi_description TEXT,
+    FOREIGN KEY (poi_town_id) REFERENCES TOWN(town_id)
+);
+
+CREATE TABLE MANAGER (
+    manager_id INT PRIMARY KEY,
+    manager_name VARCHAR(255),
+    manager_phone VARCHAR(20)
+);
+
+CREATE TABLE RESORT (
+    resort_id INT PRIMARY KEY,
+    resort_name VARCHAR(255),
+    resort_street_address VARCHAR(255),
+    resort_postcode VARCHAR(10),
+    resort_rating DECIMAL(2, 1),
+    town_id INT,
+    manager_id INT,
+    resort_manager ENUM('Y', 'N') DEFAULT 'N',
+    FOREIGN KEY (town_id) REFERENCES TOWN(town_id),
+    FOREIGN KEY (manager_id) REFERENCES MANAGER(manager_id)
+);
+
+CREATE TABLE CABIN (
+    cabin_id INT PRIMARY KEY,
+    resort_id INT,
+    cabin_no INT,
+    cabin_bedrooms INT,
+    cabin_sleeping_capacity INT,
+    cabin_description TEXT,
+    FOREIGN KEY (resort_id) REFERENCES RESORT(resort_id)
+);
+
+CREATE TABLE GUEST (
+    guest_no INT PRIMARY KEY,
+    guest_name VARCHAR(255),
+    guest_address VARCHAR(255),
+    guest_email VARCHAR(255),
+    guest_phone VARCHAR(20)
+);
+
+CREATE TABLE BOOKING (
+    booking_id INT PRIMARY KEY,
+    guest_no INT,
+    resort_id INT,
+    cabin_no INT,
+    booking_from DATE,
+    booking_to DATE,
+    booking_adults INT,
+    booking_children INT,
+    booking_charge DECIMAL(10, 2),
+    FOREIGN KEY (guest_no) REFERENCES GUEST(guest_no),
+    FOREIGN KEY (resort_id) REFERENCES RESORT(resort_id),
+    FOREIGN KEY (cabin_no) REFERENCES CABIN(cabin_id)
+);
+
+CREATE TABLE REVIEW (
+    review_id INT PRIMARY KEY,
+    guest_no INT,
+    resort_id INT,
+    review_comment TEXT,
+    review_date DATE,
+    review_rating INT,
+    FOREIGN KEY (guest_no) REFERENCES GUEST(guest_no),
+    FOREIGN KEY (resort_id) REFERENCES RESORT(resort_id)
+);
+
+CREATE TABLE SEQUENCE_TABLE (
+    name VARCHAR(50) NOT NULL,
+    current_value INT NOT NULL,
+    PRIMARY KEY (name)
+);
+
+INSERT INTO SEQUENCE_TABLE (name, current_value) VALUES ('resort_seq', 100);
+
+DELIMITER $$
+
+CREATE FUNCTION next_sequence_value(seq_name VARCHAR(50)) RETURNS INT
+BEGIN
+    DECLARE next_value INT;
+    UPDATE SEQUENCE_TABLE SET current_value = current_value + 1 WHERE name = seq_name;
+    SELECT current_value INTO next_value FROM SEQUENCE_TABLE WHERE name = seq_name;
+    RETURN next_value;
+END $$
+
+DELIMITER ;
+
+
+
+-- Q1a---
+START TRANSACTION;
+
+-- (5 resorts)
+INSERT INTO RESORT (resort_id, resort_name, resort_street_address, resort_postcode, resort_rating, town_id, manager_id)
+VALUES 
+(1, 'Merimbula Beachside Cabins', '123 Beach St', '2548', 4, 1, 1),
+(2, 'Great Ocean Road Cabins', '456 Ocean Rd', '3233', 5, 2, 2),
+(3, 'Snowy Mountains Cabins', '789 Snowy St', '2627', 3, 3, 3),
+(4, 'Yarra Valley Cabins', '321 Valley Rd', '3775', 4, 4, 4),
+(5, 'Tropical Paradise Cabins', '654 Paradise Ave', '4870', 5, 5, 5);
+
+-- (20 cabins)
+INSERT INTO CABIN (cabin_id, resort_id, cabin_no, cabin_bedrooms, cabin_sleeping_capacity, cabin_description)
+VALUES
+(1, 1, 1, 2, 4, 'Ocean view cabin with two bedrooms'),
+(2, 1, 2, 3, 6, 'Mountain view cabin with three bedrooms'),
+(3, 2, 1, 1, 2, 'Beachfront cabin with one bedroom'),
+(4, 2, 2, 2, 4, 'Beachfront cabin with two bedrooms'),
+(5, 3, 1, 2, 4, 'Snowy cabin with two bedrooms'),
+(6, 3, 2, 1, 2, 'Cosy snowy cabin with one bedroom'),
+(7, 4, 1, 3, 6, 'Valley view cabin with three bedrooms'),
+(8, 4, 2, 2, 4, 'Valley view cabin with two bedrooms'),
+(9, 5, 1, 1, 2, 'Tropical cabin with one bedroom'),
+(10, 5, 2, 2, 4, 'Tropical cabin with two bedrooms'),
+(11, 1, 3, 2, 4, 'Ocean view cabin with two bedrooms'),
+(12, 1, 4, 3, 6, 'Mountain view cabin with three bedrooms'),
+(13, 2, 3, 1, 2, 'Beachfront cabin with one bedroom'),
+(14, 2, 4, 2, 4, 'Beachfront cabin with two bedrooms'),
+(15, 3, 3, 2, 4, 'Snowy cabin with two bedrooms'),
+(16, 3, 4, 1, 2, 'Cosy snowy cabin with one bedroom'),
+(17, 4, 3, 3, 6, 'Valley view cabin with three bedrooms'),
+(18, 4, 4, 2, 4, 'Valley view cabin with two bedrooms'),
+(19, 5, 3, 1, 2, 'Tropical cabin with one bedroom'),
+(20, 5, 4, 2, 4, 'Tropical cabin with two bedrooms');
+
+-- (25 bookings)
+INSERT INTO BOOKING (booking_id, guest_no, resort_id, cabin_no, booking_from, booking_to, booking_adults, booking_children, booking_charge)
+VALUES
+(1, 1, 1, 1, '2023-01-01', '2023-01-07', 2, 2, 1000),
+(2, 2, 1, 2, '2023-02-01', '2023-02-05', 4, 0, 800),
+(3, 3, 2, 1, '2023-03-01', '2023-03-03', 2, 0, 400),
+(4, 4, 2, 2, '2023-04-01', '2023-04-10', 2, 2, 1200),
+(5, 5, 3, 1, '2023-05-01', '2023-05-07', 2, 2, 1000),
+(6, 6, 3, 2, '2023-06-01', '2023-06-10', 1, 1, 700),
+(7, 7, 4, 1, '2023-07-01', '2023-07-07', 3, 3, 1500),
+(8, 8, 4, 2, '2023-08-01', '2023-08-05', 2, 0, 800),
+(9, 9, 5, 1, '2023-09-01', '2023-09-07', 2, 2, 1000),
+(10, 10, 5, 2, '2023-10-01', '2023-10-10', 2, 1, 1100),
+(11, 1, 1, 3, '2023-01-10', '2023-01-15', 2, 2, 750),
+(12, 2, 1, 4, '2023-02-10', '2023-02-15', 4, 0, 1000),
+(13, 3, 2, 3, '2023-03-10', '2023-03-12', 2, 0, 350),
+(14, 4, 2, 4, '2023-04-15', '2023-04-20', 2, 2, 1100),
+(15, 5, 3, 3, '2023-05-10', '2023-05-15', 2, 2, 750),
+(16, 6, 3, 4, '2023-06-15', '2023-06-20', 1, 1, 600),
+(17, 7, 4, 3, '2023-07-10', '2023-07-15', 3, 3, 1300),
+(18, 8, 4, 4, '2023-08-10', '2023-08-15', 2, 0, 850),
+(19, 9, 5, 3, '2023-09-10', '2023-09-15', 2, 2, 900),
+(20, 10, 5, 4, '2023-10-15', '2023-10-20', 2, 1, 1000),
+(21, 1, 1, 1, '2023-11-01', '2023-11-07', 2, 2, 1000),
+(22, 2, 1, 2, '2023-11-10', '2023-11-15', 4, 0, 800),
+(23, 3, 2, 1, '2023-11-20', '2023-11-22', 2, 0, 400),
+(24, 4, 2, 2, '2023-12-01', '2023-12-10', 2, 2, 1200),
+(25, 5, 3, 1, '2023-12-10', '2023-12-17', 2, 2, 1000);
+
+COMMIT;
+
+-- Q1b--
+
+-- (i)--
+CREATE TABLE SEQUENCE_TABLE (
+    name VARCHAR(50) NOT NULL,
+    current_value INT NOT NULL,
+    PRIMARY KEY (name)
+);
+
+INSERT INTO SEQUENCE_TABLE (name, current_value) VALUES ('resort_seq', 100);
+
+DELIMITER $$
+
+CREATE FUNCTION next_sequence_value(seq_name VARCHAR(50)) RETURNS INT
+BEGIN
+    DECLARE next_value INT;
+    UPDATE SEQUENCE_TABLE SET current_value = current_value + 1 WHERE name = seq_name;
+    SELECT current_value INTO next_value FROM SEQUENCE_TABLE WHERE name = seq_name;
+    RETURN next_value;
+END $$
+
+DELIMITER ;
+
+-- (ii) ---
+INSERT INTO MANAGER (manager_id, manager_name, manager_phone)
+VALUES (6, 'Garrott Gooch', '6002318099');
+
+INSERT INTO RESORT (resort_id, resort_name, resort_street_address, resort_postcode, resort_rating, town_id, manager_id)
+VALUES (next_sequence_value('resort_seq'), 'Awesome Resort', '50 Awesome Road', '4830', NULL, NULL, 6);
+
+SET @new_resort_id = (SELECT resort_id FROM RESORT WHERE resort_name = 'Awesome Resort');
+
+INSERT INTO CABIN (cabin_id, resort_id, cabin_no, cabin_bedrooms, cabin_sleeping_capacity, cabin_description)
+VALUES
+(21, @new_resort_id, 1, 3, 6, 'Free wi-Fi, kitchen with 400 ltr refrigerator, stove, microwave, pots, pans, silverware, toaster, electric kettle, TV and utensils'),
+(22, @new_resort_id, 2, 2, 4, 'Free wi-Fi, kitchen with 280 ltr refrigerator, stove, pots, pans, silverware, toaster, electric kettle, TV and utensils');
+
+-- (iii) -
+INSERT INTO MANAGER (manager_id, manager_name, manager_phone)
+VALUES (7, 'Fonsie Tillard', '9636535741');
+
+UPDATE RESORT
+SET manager_id = 7, resort_manager = 'Y'
+WHERE resort_name = 'Awesome Resort';
+
+-- (iv) --
+DELETE FROM CABIN WHERE resort_id = @new_resort_id;
+
+DELETE FROM RESORT WHERE resort_id = @new_resort_id;
+
+COMMIT;
+
+-- Q2---
+-- (i)--
+
+SELECT 
+    r.resort_name AS "RESORT_NAME",
+    CONCAT(r.resort_street_address, ', ', t.town_name, ' ', r.resort_postcode) AS "RESORT ADDRESS",
+    m.manager_name AS "MANAGER_NAME",
+    m.manager_phone AS "MANAGER_PHONE"
+FROM 
+    RESORT r
+    JOIN MANAGER m ON r.manager_id = m.manager_id
+    JOIN TOWN t ON r.town_id = t.town_id
+WHERE 
+    r.resort_rating IS NULL
+    AND r.resort_manager = 'Y'
+ORDER BY 
+    r.resort_postcode DESC, 
+    r.resort_name;
+
+
+
+
+-- (ii) ---
+SELECT
+    r.resort_name AS "RESORT_NAME",
+    CONCAT(r.resort_street_address, ', ', t.town_name, ' ', r.resort_postcode) AS "RESORT ADDRESS",
+    m.manager_name AS "MANAGER_NAME",
+    m.manager_phone AS "MANAGER_PHONE"
+FROM 
+    RESORT r
+    JOIN MANAGER m ON r.manager_id = m.manager_id
+    JOIN TOWN t ON r.town_id = t.town_id
+WHERE 
+    r.resort_rating IS NULL
+    AND r.resort_manager = 'Y'
+ORDER BY 
+    r.resort_postcode DESC, 
+    r.resort_name;
+
+-- (ii) ---
+SELECT
+    r.resort_id AS "RESORT_ID",
+    r.resort_name AS "RESORT_NAME",
+    r.resort_street_address AS "RESORT_STREET_ADDRESS",
+    t.town_name AS "TOWN_NAME",
+    t.town_state AS "TOWN_STATE",
+    r.resort_postcode AS "RESORT_POSTCODE",
+    SUM(b.booking_charge) AS "TOTAL_BOOKING_CHARGES"
+FROM
+    RESORT r
+    JOIN TOWN t ON r.town_id = t.town_id
+    JOIN CABIN c ON r.resort_id = c.resort_id
+    JOIN BOOKING b ON c.cabin_id = b.cabin_id
+GROUP BY
+    r.resort_id, r.resort_name, r.resort_street_address, t.town_name, t.town_state, r.resort_postcode
+HAVING
+    SUM(b.booking_charge) > (
+        SELECT AVG(total_booking_charges)
+        FROM (
+            SELECT SUM(b2.booking_charge) AS total_booking_charges
+            FROM RESORT r2
+            JOIN CABIN c2 ON r2.resort_id = c2.resort_id
+            JOIN BOOKING b2 ON c2.cabin_id = b2.cabin_id
+            GROUP BY r2.resort_id
+        ) AS subquery
+    )
+ORDER BY
+    r.resort_id;
+
+
+
+
+
+-- (iii) ---
+SELECT 
+    r.resort_name AS "RESORT_NAME",
+    CONCAT(r.resort_street_address, ', ', t.town_name, ' ', r.resort_postcode) AS "RESORT ADDRESS",
+    m.manager_name AS "MANAGER_NAME",
+    m.manager_phone AS "MANAGER_PHONE"
+FROM 
+    RESORT r
+    JOIN MANAGER m ON r.manager_id = m.manager_id
+    JOIN TOWN t ON r.town_id = t.town_id
+WHERE 
+    r.resort_rating IS NULL
+    AND r.resort_manager = 'Y'
+ORDER BY 
+    r.resort_postcode DESC, 
+    r.resort_name;
+
+
+
+SELECT
+    r.resort_id AS "RESORT_ID",
+    r.resort_name AS "RESORT_NAME",
+    r.resort_street_address AS "RESORT_STREET_ADDRESS",
+    t.town_name AS "TOWN_NAME",
+    t.town_state AS "TOWN_STATE",
+    r.resort_postcode AS "RESORT_POSTCODE",
+    SUM(b.booking_charge) AS "TOTAL_BOOKING_CHARGES"
+FROM
+    RESORT r
+    JOIN TOWN t ON r.town_id = t.town_id
+    JOIN CABIN c ON r.resort_id = c.resort_id
+    JOIN BOOKING b ON c.cabin_id = b.cabin_id
+GROUP BY
+    r.resort_id, r.resort_name, r.resort_street_address, t.town_name, t.town_state, r.resort_postcode
+HAVING
+    SUM(b.booking_charge) > (
+        SELECT AVG(total_booking_charges)
+        FROM (
+            SELECT SUM(b2.booking_charge) AS total_booking_charges
+            FROM RESORT r2
+            JOIN CABIN c2 ON r2.resort_id = c2.resort_id
+            JOIN BOOKING b2 ON c2.cabin_id = b2.cabin_id
+            GROUP BY r2.resort_id
+        ) AS subquery
+    )
+ORDER BY
+    r.resort_id;
+
+
+
+
+SELECT 
+    rv.review_id AS "REVIEW_ID",
+    g.guest_no AS "GUEST_NO",
+    g.guest_name AS "GUEST_NAME",
+    rv.resort_id AS "RESORT_ID",
+    r.resort_name AS "RESORT_NAME",
+    rv.review_comment AS "REVIEW_COMMENT",
+    rv.review_date AS "REVIEW_DATE"
+FROM 
+    REVIEW rv
+    JOIN GUEST g ON rv.guest_no = g.guest_no
+    JOIN RESORT r ON rv.resort_id = r.resort_id
+WHERE 
+    rv.guest_no NOT IN (
+        SELECT b.guest_no
+        FROM BOOKING b
+        WHERE b.resort_id = rv.resort_id
+          AND b.booking_to < rv.review_date
+    )
+ORDER BY 
+    rv.review_date ASC;
+
+
+-- (iv) ---
+ 
+ 
+ 
+ 
+ SELECT 
+    r.resort_id AS "RESORT_ID",
+    r.resort_name AS "RESORT_NAME",
+    COUNT(c.cabin_id) AS "TOTAL_CABINS",
+    SUM(CASE WHEN c.cabin_bedrooms > 2 THEN 1 ELSE 0 END) AS "CABINS_WITH_MORE_THAN_TWO_BEDROOMS"
+FROM 
+    RESORT r
+    JOIN CABIN c ON r.resort_id = c.resort_id
+GROUP BY 
+    r.resort_id, r.resort_name
+HAVING 
+    SUM(CASE WHEN c.cabin_bedrooms > 2 THEN 1 ELSE 0 END) > 0
+ORDER BY 
+    r.resort_name;
+
+
+-- (v) ---
+
+SELECT
+    r.resort_id AS "RESORT_ID",
+    r.resort_name AS "RESORT_NAME",
+    CASE WHEN r.resort_manager = 'Y' THEN 'Yes' ELSE 'No' END AS "LIVE_IN_MANAGER",
+    COALESCE(CAST(r.resort_rating AS CHAR), 'No Ratings') AS "STAR_RATING",
+    m.manager_name AS "MANAGER_NAME",
+    m.manager_phone AS "MANAGER_PHONE",
+    COUNT(b.booking_id) AS "BOOKINGS_COUNT"
+FROM
+    RESORT r
+    LEFT JOIN MANAGER m ON r.manager_id = m.manager_id
+    LEFT JOIN BOOKING b ON r.resort_id = b.resort_id
+GROUP BY
+    r.resort_id, r.resort_name, r.resort_manager, r.resort_rating, m.manager_name, m.manager_phone
+ORDER BY
+    r.resort_id;
+
+
+-- (iv) ---
+
+
+SELECT
+    r.resort_id AS "RESORT_ID",
+    r.resort_name AS "RESORT_NAME",
+    poi.poi_name AS "POI_NAME",
+    poi.poi_street_address AS "POI_ADDRESS",
+    t.town_name AS "POI_TOWN",
+    t.town_state AS "POI_STATE",
+    poi.poi_open_time AS "POI_OPEN_TIME",
+    ROUND(geodistance(r.town_lat, r.town_long, t.town_lat, t.town_long), 2) AS "SEPARATION_IN_KMS"
+FROM
+    RESORT r
+    JOIN POINT_OF_INTEREST poi ON r.town_id = poi.poi_town_id
+    JOIN TOWN t ON poi.poi_town_id = t.town_id
+WHERE
+    geodistance(r.town_lat, r.town_long, t.town_lat, t.town_long) <= 100
+ORDER BY
+    r.resort_name,
+    "SEPARATION_IN_KMS";
+
+
+
